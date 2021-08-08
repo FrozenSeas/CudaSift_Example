@@ -1,0 +1,10 @@
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/install/local.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/install.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/list_install_components.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/install/strip.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/cudasiftlib.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/rebuild_cache.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/cudasift.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/package.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/package_source.dir
+/tmp/CudaSift_example1/CudaSift_Example/CMakeFiles/edit_cache.dir

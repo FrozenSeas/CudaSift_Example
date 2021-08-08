@@ -13,10 +13,28 @@
 #include "cudaImage.h"
 #include "cudaSift.h"
 
+struct StructPointerTest{
+        int x;
+        int y;
+};
+
+struct RetStruct{
+	int numPts;
+	float *x_pos;
+	float *y_pos;
+	float *m_x_pos;
+	float *m_y_pos;
+	float *ambiguity;
+	float *match;
+};
+
 int ImproveHomography(SiftData &data, float *homography, int numLoops, float minScore, float maxAmbiguity, float thresh);
 void PrintMatchData(SiftData &siftData1, SiftData &siftData2, CudaImage &img);
 void MatchAll(SiftData &siftData1, SiftData &siftData2, float *homography);
-
+extern "C"{
+	SiftData* img_sift_process(int height1, int width1, uchar* data1);
+	RetStruct *sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2);
+}
 double ScaleUp(CudaImage &res, CudaImage &src);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -90,6 +108,7 @@ int main(int argc, char **argv)
   // Free Sift data from device
   FreeSiftData(siftData1);
   FreeSiftData(siftData2);
+  return 1;
 }
 
 void MatchAll(SiftData &siftData1, SiftData &siftData2, float *homography)
@@ -117,8 +136,10 @@ void MatchAll(SiftData &siftData1, SiftData &siftData2, float *homography)
     for (int j=0;j<numPts2;j++) {
       float *data2 = sift2[j].data;
       float sum = 0.0f;
-      for (int k=0;k<128;k++) 
-	sum += data1[k]*data2[k];    
+      for (int k=0;k<128;k++) {
+	sum += data1[k]*data2[k];
+	std::cout<<data1[k]<<' '<<data2[k]<<std::endl;
+      }	
       float den = homography[6]*sift1[i].xpos + homography[7]*sift1[i].ypos + homography[8];
       float dx = (homography[0]*sift1[i].xpos + homography[1]*sift1[i].ypos + homography[2]) / den - sift2[j].xpos;
       float dy = (homography[3]*sift1[i].xpos + homography[4]*sift1[i].ypos + homography[5]) / den - sift2[j].ypos;
@@ -198,5 +219,121 @@ void PrintMatchData(SiftData &siftData1, SiftData &siftData2, CudaImage &img)
   }
   std::cout << std::setprecision(6);
 }
+RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2)
+{
+  int devNum = 0, imgSet = 0;
+  // Read images using OpenCV
+
+  cv::Mat limg(height1, width1, CV_8UC1, data1);
+  cv::Mat rimg(height2, width2, CV_8UC1, data2);
+  std::cout<<limg.size()<<limg.channels()<<rimg.size()<<rimg.channels();
+  //cv::flip(limg, rimg, -1);
+  unsigned int w = limg.cols;
+  unsigned int h = limg.rows;
+  std::cout << "Image size = (" << w << "," << h << ")" << std::endl;
+
+  // Initial Cuda images and download images to device
+  std::cout << "Initializing data..." << std::endl;
+  InitCuda(devNum);
+  CudaImage img1, img2;
+  img1.Allocate(w, h, iAlignUp(w, 128), false, NULL, (float*)limg.data);
+  img2.Allocate(w, h, iAlignUp(w, 128), false, NULL, (float*)rimg.data);
+  img1.Download();
+  img2.Download();
+
+  // Extract Sift features from images
+  SiftData siftData1, siftData2;
+  float initBlur = 1.0f;
+  float thresh = (imgSet ? 4.5f : 3.0f);
+  InitSiftData(siftData1, 32768, true, true);
+  InitSiftData(siftData2, 32768, true, true);
+
+  // A bit of benchmarking
+  //for (int thresh1=1.00f;thresh1<=4.01f;thresh1+=0.50f) {
+  float *memoryTmp = AllocSiftTempMemory(w, h, 5, false);
+  ExtractSift(siftData1, img1, 5, initBlur, thresh, 0.0f, false, memoryTmp);
+  ExtractSift(siftData2, img2, 5, initBlur, thresh, 0.0f, false, memoryTmp);
+  FreeSiftTempMemory(memoryTmp);
+  std::cout<<siftData1.numPts<<"   "<<siftData2.numPts;
+    // Match Sift features and find a homography
+  MatchSiftData(siftData1, siftData2);
+  
+  float homography[9];
+  int numMatches;
+  FindHomography(siftData1, homography, &numMatches, 10000, 0.00f, 0.80f, 5.0);
+  int numFit = ImproveHomography(siftData1, homography, 5, 0.00f, 0.80f, 3.0);
+
+  std::cout << "Number of original features: " <<  siftData1.numPts << " " << siftData2.numPts << std::endl;
+  std::cout << "Number of matching features: " << numFit << " " << numMatches << " " << 100.0f*numFit/std::min(siftData1.numPts, siftData2.numPts) << "% " << initBlur << " " << thresh << std::endl;
+    //}
+
+  // Print out and store summary data
+  PrintMatchData(siftData1, siftData2, img1);
+  cv::imwrite("data/limg_pts.jpg", limg);
+
+  //MatchAll(siftData1, siftData2, homography);
+
+  RetStruct *p = (RetStruct*)malloc(sizeof(struct RetStruct));
+  p->numPts = siftData1.numPts;
+  p->x_pos = (float*)malloc(sizeof(float) * p->numPts);
+  p->y_pos = (float*)malloc(sizeof(float) * p->numPts);
+  p->m_x_pos = (float*)malloc(sizeof(float) * p->numPts);
+  p->m_y_pos = (float*)malloc(sizeof(float) * p->numPts);
+  p->match = (float*)malloc(sizeof(int) * p->numPts);
+  p->ambiguity = (float*)malloc(sizeof(float) * p->numPts);
+  for(int i=0;i<p->numPts;i++){
+	p->x_pos[i] = siftData1.h_data[i].xpos;
+	p->y_pos[i] = siftData1.h_data[i].ypos;
+	p->m_x_pos[i] = siftData1.h_data[i].match_xpos;
+	p->m_y_pos[i] = siftData1.h_data[i].match_ypos;
+	p->match[i] = siftData1.h_data[i].score;
+	p->ambiguity[i] = siftData1.h_data[i].ambiguity;
+  }
+  // Free Sift data from device
+  FreeSiftData(siftData1);
+  FreeSiftData(siftData2);
+  
+  
+  
+  return p;
+}
 
 
+
+SiftData* img_sift_process(int height1, int width1, uchar* data1){
+  int devNum = 0, imgSet = 0;
+  // Read images using OpenCV
+
+  cv::Mat limg(height1, width1, CV_8UC1, data1);
+  //cv::flip(limg, rimg, -1);
+  unsigned int w = limg.cols;
+  unsigned int h = limg.rows;
+  std::cout << "Image size = (" << w << "," << h << ")" << std::endl;
+
+  // Initial Cuda images and download images to device
+  std::cout << "Initializing data..." << std::endl;
+  InitCuda(devNum);
+  CudaImage img1;
+  img1.Allocate(w, h, iAlignUp(w, 128), false, NULL, (float*)limg.data);
+  img1.Download();
+  
+  // Extract Sift features from images
+  SiftData siftData1;
+  float initBlur = 1.0f;
+  float thresh = (imgSet ? 4.5f : 3.0f);
+  InitSiftData(siftData1, 32768, true, true);
+
+  // A bit of benchmarking
+  //for (int thresh1=1.00f;thresh1<=4.01f;thresh1+=0.50f) {
+  float *memoryTmp = AllocSiftTempMemory(w, h, 5, false); 
+  ExtractSift(siftData1, img1, 5, initBlur, thresh, 0.0f, false, memoryTmp);
+  FreeSiftTempMemory(memoryTmp);
+  SiftData *siftdata_point = &siftData1;
+  std::cout<< '1' << siftData1.numPts << ' ' << siftData1.maxPts<< ' ' <<siftData1.d_data <<' ' << siftData1.h_data[0].data[0]<<std::endl;
+  
+  StructPointerTest *p = (StructPointerTest*)malloc(sizeof(struct StructPointerTest));
+  p->x = 101;
+  p->y = 201;  
+  
+  return &siftData1;
+}

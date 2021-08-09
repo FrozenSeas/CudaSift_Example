@@ -24,8 +24,7 @@ struct RetStruct{
 	float *y_pos;
 	float *m_x_pos;
 	float *m_y_pos;
-	float *ambiguity;
-	float *match;
+	float *match_error;
 };
 
 int ImproveHomography(SiftData &data, float *homography, int numLoops, float minScore, float maxAmbiguity, float thresh);
@@ -275,20 +274,20 @@ RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int w
 
   RetStruct *p = (RetStruct*)malloc(sizeof(struct RetStruct));
   p->numPts = siftData1.numPts;
-  p->x_pos = (float*)malloc(sizeof(float) * p->numPts);
-  p->y_pos = (float*)malloc(sizeof(float) * p->numPts);
-  p->m_x_pos = (float*)malloc(sizeof(float) * p->numPts);
-  p->m_y_pos = (float*)malloc(sizeof(float) * p->numPts);
-  p->match = (float*)malloc(sizeof(int) * p->numPts);
-  p->ambiguity = (float*)malloc(sizeof(float) * p->numPts);
+  p->x_pos =     (float*)malloc(sizeof(float) * p->numPts);
+  p->y_pos =     (float*)malloc(sizeof(float) * p->numPts);
+  p->m_x_pos =   (float*)malloc(sizeof(float) * p->numPts);
+  p->m_y_pos =   (float*)malloc(sizeof(float) * p->numPts);
+  p->match_error =     (float*)malloc(sizeof(float) * p->numPts); 
   for(int i=0;i<p->numPts;i++){
 	p->x_pos[i] = siftData1.h_data[i].xpos;
 	p->y_pos[i] = siftData1.h_data[i].ypos;
 	p->m_x_pos[i] = siftData1.h_data[i].match_xpos;
 	p->m_y_pos[i] = siftData1.h_data[i].match_ypos;
-	p->match[i] = siftData1.h_data[i].score;
-	p->ambiguity[i] = siftData1.h_data[i].ambiguity;
+	p->match_error[i] = siftData1.h_data[i].match_error;
+	
   }
+  
   // Free Sift data from device
   FreeSiftData(siftData1);
   FreeSiftData(siftData2);

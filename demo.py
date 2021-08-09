@@ -43,8 +43,7 @@ class RetStruct(Structure):
                ('y_pos', POINTER(c_float)),
                ('m_x_pos', POINTER(c_float)),
                ('m_y_pos', POINTER(c_float)),
-               ('match', POINTER(c_float)),
-               ('ambiguity', POINTER(c_float))]
+               ('match_error', POINTER(c_float))]
 
 starttime = datetime.datetime.now()
 img1_path = "data/left.pgm"
@@ -70,9 +69,11 @@ print(h1,w1,frame_data1)
 sotest.sift_process.restype = POINTER(RetStruct)
 t = sotest.sift_process(h1,w1,frame_data1,h2,w2,frame_data2)
 print(t.contents.numPts)
+print()
+print()
 count = 0
 for i in range(t.contents.numPts):
-    if t.contents.ambiguity[i]<0.80 and t.contents.match[i]>0.0:
+    if t.contents.match_error[i]<3.0:
         count+=1
 print(count)
 

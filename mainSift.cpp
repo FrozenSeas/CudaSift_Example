@@ -9,10 +9,9 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
+#include <fstream>
 #include "cudaImage.h"
 #include "cudaSift.h"
-
 struct StructPointerTest{
         int x;
         int y;
@@ -31,6 +30,7 @@ int ImproveHomography(SiftData &data, float *homography, int numLoops, float min
 void PrintMatchData(SiftData &siftData1, SiftData &siftData2, CudaImage &img);
 void MatchAll(SiftData &siftData1, SiftData &siftData2, float *homography);
 extern "C"{
+	int read_image(char* p);
 	SiftData* img_sift_process(int height1, int width1, uchar* data1);
 	RetStruct *sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2);
 }
@@ -218,15 +218,28 @@ void PrintMatchData(SiftData &siftData1, SiftData &siftData2, CudaImage &img)
   }
   std::cout << std::setprecision(6);
 }
+
+int read_image(char* p){
+    std::cout<<p<<std::endl;
+    cv::Mat ret;
+    cv::imread(p,0).convertTo(ret, CV_32FC1);
+    return 0;
+
+}
+
 RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2)
 {
   int devNum = 0, imgSet = 0;
   // Read images using OpenCV
 
-  cv::Mat limg(height1, width1, CV_8UC1, data1);
-  cv::Mat rimg(height2, width2, CV_8UC1, data2);
-  std::cout<<limg.size()<<limg.channels()<<rimg.size()<<rimg.channels();
-  //cv::flip(limg, rimg, -1);
+  cv::Mat limg(height1, width1, CV_8UC1 , data1);
+  limg.convertTo(limg,CV_32FC1);
+  cv::Mat rimg(height2, width2, CV_8UC1 , data2);
+  rimg.convertTo(rimg,CV_32FC1);
+  //cv::Mat rimg;
+  //cv::Mat limg;
+  //cv::imread("picture/ad_units/ad_unit_1133.jpg", 0).convertTo(limg, CV_32FC1);
+  //cv::imread("picture/ad_units/ad_unit_1177.jpg", 0).convertTo(rimg, CV_32FC1);
   unsigned int w = limg.cols;
   unsigned int h = limg.rows;
   std::cout << "Image size = (" << w << "," << h << ")" << std::endl;

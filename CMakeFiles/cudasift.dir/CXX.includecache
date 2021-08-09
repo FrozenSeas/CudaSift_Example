@@ -35,6 +35,8 @@ opencv2/highgui/highgui.hpp
 -
 opencv2/imgproc/imgproc.hpp
 -
+fstream
+-
 cudaImage.h
 /tmp/CudaSift_example1/CudaSift_Example/cudaImage.h
 cudaSift.h

@@ -269,7 +269,7 @@ RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int w
   // Print out and store summary data
   PrintMatchData(siftData1, siftData2, img1);
   cv::imwrite("data/limg_pts.jpg", limg);
-
+  cv::imwrite("data/limg_pts.pgm", limg);
   //MatchAll(siftData1, siftData2, homography);
 
   RetStruct *p = (RetStruct*)malloc(sizeof(struct RetStruct));

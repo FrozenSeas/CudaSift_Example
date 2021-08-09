@@ -46,8 +46,8 @@ class RetStruct(Structure):
                ('match_error', POINTER(c_float))]
 
 starttime = datetime.datetime.now()
-img1_path = "data/left.pgm"
-img2_path = "data/righ.pgm"
+img1_path = "data/img1.png"
+img2_path = "data/img2.png"
 img1_path_c = c_wchar_p("data/left.pgm")
 img2_path_c = c_wchar_p("data/righ.pgm")
 img1 = cv2.imread(img1_path)

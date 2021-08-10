@@ -30,8 +30,9 @@ int ImproveHomography(SiftData &data, float *homography, int numLoops, float min
 void PrintMatchData(SiftData &siftData1, SiftData &siftData2, CudaImage &img);
 void MatchAll(SiftData &siftData1, SiftData &siftData2, float *homography);
 extern "C"{
+	void free_RetStruct(RetStruct* p);
 	int read_image(char* p);
-	SiftData* img_sift_process(int height1, int width1, uchar* data1);
+	RetStruct* img_sift_process(int height1, int width1, uchar* data1);
 	RetStruct *sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2,int img_number);
 }
 double ScaleUp(CudaImage &res, CudaImage &src);
@@ -309,7 +310,7 @@ RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int w
 	p->m_x_pos[i] = siftData1.h_data[i].match_xpos;
 	p->m_y_pos[i] = siftData1.h_data[i].match_ypos;
 	p->data[i] = (float*)malloc(sizeof(float) * 128);
-	for(int j=0;j<p->numPts;j++){
+	for(int j=0;j<128;j++){
 	    p->data[i][j] = siftData1.h_data[i].data[j];
 	}
   	//std::cout<<p->x_pos[i]<<' '<<p->y_pos[i]<<' '<<p->m_x_pos[i]<<' '<<p->m_y_pos[i]<<' '<<p->match_error[i]<<std::endl;
@@ -324,14 +325,26 @@ RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int w
   return p;
 }
 
+void free_RetStruct(RetStruct* p){
+    for(int i=0;i<p->numPts;i++){
+	free(p->data[i]);
+    }
+    free(p->data);
+    free(p->x_pos);
+    free(p->y_pos);
+    free(p->m_x_pos);
+    free(p->m_y_pos);
+    free(p);
 
+}
 
-SiftData* img_sift_process(int height1, int width1, uchar* data1){
+RetStruct* img_sift_process(int height1, int width1, uchar* data1){
   int devNum = 0, imgSet = 0;
   // Read images using OpenCV
 
-  cv::Mat limg(height1, width1, CV_8UC1, data1);
-  //cv::flip(limg, rimg, -1);
+  cv::Mat limg(height1, width1, CV_8UC1 , data1);
+  limg.convertTo(limg,CV_32FC1);
+
   unsigned int w = limg.cols;
   unsigned int h = limg.rows;
   std::cout << "Image size = (" << w << "," << h << ")" << std::endl;
@@ -345,21 +358,40 @@ SiftData* img_sift_process(int height1, int width1, uchar* data1){
   
   // Extract Sift features from images
   SiftData siftData1;
-  float initBlur = 1.0f;
-  float thresh = (imgSet ? 4.5f : 3.0f);
+  float initBlur = 0.0f;
+  float thresh = 0.04f;//(imgSet ? 4.5f : 3.0f);
   InitSiftData(siftData1, 32768, true, true);
 
   // A bit of benchmarking
   //for (int thresh1=1.00f;thresh1<=4.01f;thresh1+=0.50f) {
   float *memoryTmp = AllocSiftTempMemory(w, h, 5, false); 
   ExtractSift(siftData1, img1, 5, initBlur, thresh, 0.0f, false, memoryTmp);
-  FreeSiftTempMemory(memoryTmp);
-  SiftData *siftdata_point = &siftData1;
-  std::cout<< '1' << siftData1.numPts << ' ' << siftData1.maxPts<< ' ' <<siftData1.d_data <<' ' << siftData1.h_data[0].data[0]<<std::endl;
+  std::cout<<"ok";
+  //FreeSiftTempMemory(memoryTmp);
   
-  StructPointerTest *p = (StructPointerTest*)malloc(sizeof(struct StructPointerTest));
-  p->x = 101;
-  p->y = 201;  
+  RetStruct *p = (RetStruct*)malloc(sizeof(struct RetStruct));
+  p->numPts = siftData1.numPts;
+  p->x_pos =     (float*)malloc(sizeof(float) * p->numPts);
+  p->y_pos =     (float*)malloc(sizeof(float) * p->numPts);
+  p->m_x_pos =   (float*)malloc(sizeof(float) * p->numPts);
+  p->m_y_pos =   (float*)malloc(sizeof(float) * p->numPts);
+  p->data =     (float**)malloc(sizeof(float*) * p->numPts);
+  for(int i=0;i<p->numPts;i++){
+        p->x_pos[i] = siftData1.h_data[i].xpos;
+        p->y_pos[i] = siftData1.h_data[i].ypos;
+        p->m_x_pos[i] = siftData1.h_data[i].match_xpos;
+        p->m_y_pos[i] = siftData1.h_data[i].match_ypos;
+        p->data[i] = (float*)malloc(sizeof(float) * 128);
+        for(int j=0;j<128;j++){
+            p->data[i][j] = siftData1.h_data[i].data[j];
+        }
+        //std::cout<<p->x_pos[i]<<' '<<p->y_pos[i]<<' '<<p->m_x_pos[i]<<' '<<p->m_y_pos[i]<<' '<<std::endl;
+  }
+
+  // Free Sift data from device
+  FreeSiftData(siftData1);
+
+    
   
-  return &siftData1;
+  return p;
 }

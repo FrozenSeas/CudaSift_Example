@@ -275,7 +275,7 @@ CUDA_VERBOSE_BUILD:BOOL=OFF
 CUDA_VERSION:STRING=10.2
 
 //"cublas" library
-CUDA_cublas_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libcublas.so
+CUDA_cublas_LIBRARY:FILEPATH=/usr/local/cuda/lib64/libcublas.so
 
 //"cublas_device" library
 CUDA_cublas_device_LIBRARY:FILEPATH=CUDA_cublas_device_LIBRARY-NOTFOUND

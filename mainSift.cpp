@@ -23,7 +23,7 @@ struct RetStruct{
 	float *y_pos;
 	float *m_x_pos;
 	float *m_y_pos;
-	float **data;
+	float *match_error;
 };
 
 int ImproveHomography(SiftData &data, float *homography, int numLoops, float minScore, float maxAmbiguity, float thresh);
@@ -266,7 +266,7 @@ RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int w
   // Extract Sift features from images
   SiftData siftData1, siftData2;
   float initBlur = 1.0f;
-  float thresh = (imgSet ? 4.5f : 3.0f);
+  float thresh = 0.04f;
   InitSiftData(siftData1, 32768, true, true);
   InitSiftData(siftData2, 32768, true, true);
 
@@ -286,7 +286,7 @@ RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int w
   //int numFit = ImproveHomography(siftData1, homography, 5, 0.00f, 0.80f, 3.0);
 
   std::cout << "Number of original features: " <<  siftData1.numPts << " " << siftData2.numPts << std::endl;
-  //std::cout << "Number of matching features: " << numFit << " " << numMatches << " " << 100.0f*numFit/std::min(siftData1.numPts, siftData2.numPts) << "% " << initBlur << " " << thresh << std::endl;
+  //std::cout << "Number of matching features: " << " " << numMatches << " " << initBlur << " " << thresh << std::endl;
     //}
 
   // Print out and store summary data
@@ -302,16 +302,13 @@ RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int w
   p->y_pos =     (float*)malloc(sizeof(float) * p->numPts);
   p->m_x_pos =   (float*)malloc(sizeof(float) * p->numPts);
   p->m_y_pos =   (float*)malloc(sizeof(float) * p->numPts);
-  p->data =     (float**)malloc(sizeof(float*) * p->numPts); 
+  p->match_error = (float*)malloc(sizeof(float) * p->numPts); 
   for(int i=0;i<p->numPts;i++){
 	p->x_pos[i] = siftData1.h_data[i].xpos;
 	p->y_pos[i] = siftData1.h_data[i].ypos;
 	p->m_x_pos[i] = siftData1.h_data[i].match_xpos;
 	p->m_y_pos[i] = siftData1.h_data[i].match_ypos;
-	p->data[i] = (float*)malloc(sizeof(float) * 128);
-	for(int j=0;j<p->numPts;j++){
-	    p->data[i][j] = siftData1.h_data[i].data[j];
-	}
+	p->match_error[i] = siftData1.h_data[i].ambiguity;
   	//std::cout<<p->x_pos[i]<<' '<<p->y_pos[i]<<' '<<p->m_x_pos[i]<<' '<<p->m_y_pos[i]<<' '<<p->match_error[i]<<std::endl;
   }
   

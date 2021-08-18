@@ -30,8 +30,7 @@ int ImproveHomography(SiftData &data, float *homography, int numLoops, float min
 void PrintMatchData(SiftData &siftData1, SiftData &siftData2, CudaImage &img);
 void MatchAll(SiftData &siftData1, SiftData &siftData2, float *homography);
 extern "C"{
-	int read_image(char* p);
-	RetStruct *sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2,int img_number);
+	RetStruct *sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2);
 }
 double ScaleUp(CudaImage &res, CudaImage &src);
 
@@ -226,7 +225,7 @@ int read_image(char* p){
 
 }
 
-RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2,int img_number)
+RetStruct* sift_process(int height1, int width1, uchar* data1,int height2, int width2, uchar* data2)
 {
   int devNum = 0, imgSet = 0;
 
